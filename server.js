@@ -25,21 +25,29 @@ const mimeTypes = {
 };
 
 http.createServer((req, res) => {
-  // Default to index.html for root or directory
-  let reqPath = req.url.split('?')[0];
-  let filePath = path.join(ROOT, reqPath === '/' ? 'index.html' : decodeURIComponent(reqPath));
-  
+  const reqPath = req.url.split('?')[0];
+  const filePath = path.join(ROOT, reqPath === '/' ? 'index.html' : decodeURIComponent(reqPath));
   const ext = path.extname(filePath).toLowerCase();
   const contentType = mimeTypes[ext] || 'application/octet-stream';
 
+  // Log all incoming requests
+  console.log(`[REQUEST] ${req.method} ${req.url}`);
+
   fs.readFile(filePath, (err, content) => {
     if (err) {
-      res.writeHead(err.code === 'ENOENT' ? 404 : 500);
-      res.end(err.code === 'ENOENT' ? '404 Not Found' : `Server Error: ${err.code}`);
+      if (err.code === 'ENOENT') {
+        console.warn(`[404] File not found: ${filePath}`);
+        res.writeHead(404);
+        res.end('404 Not Found');
+      } else {
+        console.error(`[ERROR] Reading file: ${filePath}\n`, err);
+        res.writeHead(500);
+        res.end('500 Server Error');
+      }
     } else {
       res.writeHead(200, {
         'Content-Type': contentType,
-        'Access-Control-Allow-Origin': '*', // helpful for WebAssembly or local testing
+        'Access-Control-Allow-Origin': '*',
       });
       res.end(content);
     }
